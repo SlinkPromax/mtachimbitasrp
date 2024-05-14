@@ -143,163 +143,39 @@
     <script>
         var currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
         var dudas = JSON.parse(localStorage.getItem('dudas')) || [];
-        var usuariosSilenciados = JSON.parse(localStorage.getItem('usuariosSilenciados')) || {};
+        var reportForm = document.getElementById('reportForm');
+        var dudasSection = document.getElementById('dudasSection');
+        var response = document.getElementById('response');
+        var adminSection = document.querySelector('.admin-section');
 
-        document.addEventListener('DOMContentLoaded', function() {
-            if(currentUser && currentUser.username === 'slink') {
-                document.querySelector('.admin-section').classList.add('show');
-                displayDudas(); // Mostrar las dudas guardadas para el usuario "slink"
-                displayCalificaciones();
-            }
-            displayDudas();
-        });
+        reportForm.onsubmit = function(e) {
+            e.preventDefault();
+            var reportText = document.getElementById('report').value;
+            var newDuda = {
+                id: dudas.length + 1,
+                text: reportText,
+                user: currentUser
+            };
+            dudas.push(newDuda);
+            localStorage.setItem('dudas', JSON.stringify(dudas));
+            mostrarDudas();
+            response.innerHTML = '<p class="respuesta">¡Gracias por tu reporte!</p>';
+            document.getElementById('report').value = ''; // Limpiar el formulario
+        };
 
-        document.getElementById("reportForm").addEventListener("submit", function(event) {
-            event.preventDefault();
-            const report = document.getElementById("report").value;
-            const imageFile = document.getElementById("fileInput").files[0];
-            const imageSrc = imageFile ? URL.createObjectURL(imageFile) : null;
-            if (!isUsuarioSilenciado(currentUser.username) && dudas.filter(duda => duda.user === currentUser.username).length < 2) {
-                document.getElementById("response").innerHTML = "Tu reporte ha sido enviado correctamente. Espera a que nuestro equipo de administración te atienda.";
-                setTimeout(function() {
-                    document.getElementById("response").innerHTML = "";
-                }, 3000);
-                const currentTime = new Date().toLocaleString();
-                const duda = { user: currentUser.username, report: report, timestamp: currentTime, image: imageSrc }; // Agregamos el nombre del usuario y la imagen
-                dudas.push(duda);
-                localStorage.setItem('dudas', JSON.stringify(dudas));
-                displayDudas();
-            } else {
-                alert('No puedes enviar más dudas por ahora.');
-            }
-        });
-
-        function displayDudas() {
-            const dudasSection = document.getElementById("dudasSection");
-            const adminDudasSection = document.getElementById("adminDudasSection");
+        function mostrarDudas() {
             dudasSection.innerHTML = '';
-            adminDudasSection.innerHTML = '';
-            dudas.forEach(duda => {
-                const dudaHTML = `
-                    <p>${duda.user}: ${duda.report} - Enviado el ${duda.timestamp}</p>
-                    ${duda.image ? `<img src="${duda.image}" style="max-width: 200px; max-height: 200px;">` : ''}
-                `;
-                const respuestaHTML = duda.respuesta ? `<div class="respuesta">Respuesta: ${duda.respuesta}</div>` : '';
-                const calificacionHTML = duda.calificacion ? `<div class="calificacion">Calificación: ${duda.calificacion} - ${duda.comentario}</div>` : '';
-                dudasSection.innerHTML += `${dudaHTML} ${respuestaHTML} ${calificacionHTML}`;
-                adminDudasSection.innerHTML += `
-                    <div>
-                        ${dudaHTML}
-                        <button class="button-small" onclick="responderDuda('${duda.user}', '${duda.report}')">Responder</button>
-                        <button class="button-small" onclick="eliminarDuda('${duda.user}', '${duda.report}')">Eliminar</button>
-                        ${duda.respuesta ? `<button class="button-small" onclick="calificar('${duda.user}', '${duda.timestamp}')">Calificar</button>` : ''}
-                    </div>
-                `;
+            dudas.forEach(function(d) {
+                var dudaElement = document.createElement('div');
+                dudaElement.innerHTML = '<p>' + d.text + '</p>';
+                dudasSection.appendChild(dudaElement);
             });
         }
 
-        function responderDuda(user, report) {
-            const respuesta = prompt("Ingresa tu respuesta:");
-            if (respuesta !== null && respuesta.trim() !== "") {
-                const dudaIndex = dudas.findIndex(duda => duda.user === user && duda.report === report);
-                if (dudaIndex !== -1) {
-                    dudas[dudaIndex].respuesta = respuesta;
-                    localStorage.setItem('dudas', JSON.stringify(dudas));
-                    displayDudas();
-                }
-            }
-        }
+        mostrarDudas();
 
-        function eliminarDuda(user, report) {
-            const confirmacion = confirm("¿Estás seguro de que quieres eliminar esta duda?");
-            if (confirmacion) {
-                dudas = dudas.filter(duda => !(duda.user === user && duda.report === report));
-                localStorage.setItem('dudas', JSON.stringify(dudas));
-                displayDudas();
-            }
-        }
-
-        function calificar(user, timestamp) {
-            const calificacion = prompt("Califica del 1 al 10:");
-            if (calificacion !== null && calificacion.trim() !== "") {
-                const comentario = prompt("Déjanos tu comentario:");
-                const dudaIndex = dudas.findIndex(duda => duda.user === user && duda.timestamp === timestamp);
-                if (dudaIndex !== -1) {
-                    dudas[dudaIndex].calificacion = calificacion;
-                    dudas[dudaIndex].comentario = comentario;
-                    localStorage.setItem('dudas', JSON.stringify(dudas));
-                    displayDudas();
-                }
-            }
-        }
-
-        function eliminarTodasLasDudas() {
-            const confirmacion = confirm("¿Estás seguro de que quieres eliminar todas las dudas?");
-            if (confirmacion) {
-                localStorage.removeItem('dudas');
-                dudas = [];
-                displayDudas();
-            }
-        }
-
-        function silenciarUsuario() {
-            const username = prompt("Ingresa el nombre del usuario a silenciar:");
-            const tiempo = parseInt(prompt("Ingresa el tiempo de silenciamiento en minutos:"));
-            if (tiempo > 0) {
-                const tiempoEnMilisegundos = tiempo * 60 * 1000;
-                const tiempoDeSilenciamiento = Date.now() + tiempoEnMilisegundos;
-                usuariosSilenciados[username] = tiempoDeSilenciamiento;
-                localStorage.setItem('usuariosSilenciados', JSON.stringify(usuariosSilenciados));
-                alert(`Usuario ${username} silenciado por ${tiempo} minutos.`);
-            }
-        }
-
-        function isUsuarioSilenciado(username) {
-            if (usuariosSilenciados.hasOwnProperty(username)) {
-                if (usuariosSilenciados[username] > Date.now()) {
-                    return true;
-                } else {
-                    delete usuariosSilenciados[username];
-                    localStorage.setItem('usuariosSilenciados', JSON.stringify(usuariosSilenciados));
-                }
-            }
-            return false;
-        }
-
-        // Calificaciones
-        var calificaciones = JSON.parse(localStorage.getItem('calificaciones')) || {};
-
-        function displayCalificaciones() {
-            const calificacionesSection = document.getElementById("calificacionesSection");
-            calificacionesSection.innerHTML = '<h2>Calificaciones del Personal</h2>';
-            for (const staffMember in calificaciones) {
-                const totalCalificaciones = calificaciones[staffMember].length;
-                const sumaCalificaciones = calificaciones[staffMember].reduce((total, calificacion) => total + calificacion, 0);
-                const promedioCalificaciones = totalCalificaciones > 0 ? sumaCalificaciones / totalCalificaciones : 0;
-                calificacionesSection.innerHTML += `
-                    <div>
-                        <p>${staffMember} - Promedio: ${promedioCalificaciones.toFixed(1)}</p>
-                        <button class="button-small" onclick="verCalificaciones('${staffMember}')">Ver Calificaciones</button>
-                    </div>
-                `;
-            }
-        }
-
-        function verCalificaciones(staffMember) {
-            const calificacionesSection = document.getElementById("calificacionesSection");
-            const calificacionesStaff = calificaciones[staffMember];
-            if (calificacionesStaff && calificacionesStaff.length > 0) {
-                const calificacionesHTML = calificacionesStaff.map(calificacion => `<li>${calificacion}</li>`).join('');
-                calificacionesSection.innerHTML += `
-                    <div>
-                        <h3>Calificaciones de ${staffMember}</h3>
-                        <ul>${calificacionesHTML}</ul>
-                    </div>
-                `;
-            } else {
-                calificacionesSection.innerHTML += `<p>No hay calificaciones para ${staffMember}.</p>`;
-            }
-            
+        if (currentUser && currentUser.username === 'slink') {
+            adminSection.classList.add('show');
         }
     </script>
 </body>
