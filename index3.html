@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChimbitasRp - Soporte</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Estilos adicionales */
+        body {
+            background-color: #07060a;
+            color: #ffffff;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .description {
+            margin-bottom: 20px;
+        }
+
+        .embed {
+            border: 1px solid #3a3a3a;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .button {
+            background-color: #15171a;
+            color: #d2c8e4;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .button:hover {
+            background-color: #0a0a0a;
+        }
+
+        .logo {
+            width: 50px;
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+        }
+
+        textarea {
+            font-weight: bold;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            width: 100%;
+            margin-top: 5px;
+            resize: none;
+        }
+
+        .bold-label {
+            font-weight: bold;
+        }
+
+        .dudas {
+            text-align: left;
+            margin-top: 20px;
+        }
+
+        .admin-section {
+            background-color: #2c2b2e;
+            border-radius: 5px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .admin-section.show {
+            display: block;
+        }
+
+        .respuesta {
+            margin-top: 10px;
+            font-style: italic;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ChimbitasRp - Soporte</h1>
+        <div class="description">
+            <p>Estamos aquí para atenderte en todo lo que necesites. Envíanos tus dudas, reportes o cualquier consulta y nuestro equipo de Chimbitas RP estará encantado de ayudarte. ¡Tu experiencia de juego es nuestra prioridad!</p>
+            <p>No dudes en contactarnos, ¡estamos listos para servirte!</p>
+        </div>
+        <div class="embed">
+            <!-- Embed de Discord -->
+            <iframe src="https://discord.com/widget?id=1217600100562505909&theme=dark" width="350" height="500" allowtransparency="true" frameborder="0"></iframe>
+        </div>
+        <div class="embed">
+            <!-- Formulario para enviar el reporte -->
+            <form id="reportForm">
+                <label for="report" class="bold-label">Envía tu duda o reporte:</label><br>
+                <textarea id="report" name="report" rows="4" cols="50" placeholder="Escribe aquí tu reporte" style="background-color: #1e1e1e; color: #ffffff;"></textarea><br><br>
+                <input type="file" id="fileInput" accept="image/*"> <!-- Agregamos un input para imágenes -->
+                <button type="submit">Enviar</button>
+            </form>
+            <div id="response"></div>
+        </div>
+        <div class="dudas" id="dudasSection"></div>
+        <!-- Sección de administración visible solo para el usuario "slink" -->
+        <div class="admin-section">
+            <h2>Administración</h2>
+            <div id="adminDudasSection"></div>
+            <div id="calificacionesSection"></div> <!-- Agregamos una sección para mostrar las calificaciones -->
+            <div>
+                <button class="button-small" onclick="eliminarTodasLasDudas()">Eliminar Todas las Dudas</button>
+                <button class="button-small" onclick="silenciarUsuario()">Silenciar Usuario</button>
+            </div>
+        </div>
+        <a href="#" class="button">Ir a Inicio</a>
+        <img src="logo.png" alt="Logo" class="logo">
+    </div>
+
+    <!-- Script para procesar el envío del reporte -->
+    <script>
+        var currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+        var dudas = JSON.parse(localStorage.getItem('dudas')) || [];
+        var usuariosSilenciados = JSON.parse(localStorage.getItem('usuariosSilenciados')) || {};
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if(currentUser && currentUser.username === 'slink') {
+                document.querySelector('.admin-section').classList.add('show');
+                displayDudas(); // Mostrar las dudas guardadas para el usuario "slink"
+                displayCalificaciones();
+            }
+            displayDudas();
+        });
+
+        document.getElementById("reportForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+            const report = document.getElementById("report").value;
+            const imageFile = document.getElementById("fileInput").files[0];
+            const imageSrc = imageFile ? URL.createObjectURL(imageFile) : null;
+            if (!isUsuarioSilenciado(currentUser.username) && dudas.filter(duda => duda.user === currentUser.username).length < 2) {
+                document.getElementById("response").innerHTML = "Tu reporte ha sido enviado correctamente. Espera a que nuestro equipo de administración te atienda.";
+                setTimeout(function() {
+                    document.getElementById("response").innerHTML = "";
+                }, 3000);
+                const currentTime = new Date().toLocaleString();
+                const duda = { user: currentUser.username, report: report, timestamp: currentTime, image: imageSrc }; // Agregamos el nombre del usuario y la imagen
+                dudas.push(duda);
+                localStorage.setItem('dudas', JSON.stringify(dudas));
+                displayDudas();
+            } else {
+                alert('No puedes enviar más dudas por ahora.');
+            }
+        });
+
+        function displayDudas() {
+            const dudasSection = document.getElementById("dudasSection");
+            const adminDudasSection = document.getElementById("adminDudasSection");
+            dudasSection.innerHTML = '';
+            adminDudasSection.innerHTML = '';
+            dudas.forEach(duda => {
+                const dudaHTML = `
+                    <p>${duda.user}: ${duda.report} - Enviado el ${duda.timestamp}</p>
+                    ${duda.image ? `<img src="${duda.image}" style="max-width: 200px; max-height: 200px;">` : ''}
+                `;
+                const respuestaHTML = duda.respuesta ? `<div class="respuesta">Respuesta: ${duda.respuesta}</div>` : '';
+                const calificacionHTML = duda.calificacion ? `<div class="calificacion">Calificación: ${duda.calificacion} - ${duda.comentario}</div>` : '';
+                dudasSection.innerHTML += `${dudaHTML} ${respuestaHTML} ${calificacionHTML}`;
+                adminDudasSection.innerHTML += `
+                    <div>
+                        ${dudaHTML}
+                        <button class="button-small" onclick="responderDuda('${duda.user}', '${duda.report}')">Responder</button>
+                        <button class="button-small" onclick="eliminarDuda('${duda.user}', '${duda.report}')">Eliminar</button>
+                        ${duda.respuesta ? `<button class="button-small" onclick="calificar('${duda.user}', '${duda.timestamp}')">Calificar</button>` : ''}
+                    </div>
+                `;
+            });
+        }
+
+        function responderDuda(user, report) {
+            const respuesta = prompt("Ingresa tu respuesta:");
+            if (respuesta !== null && respuesta.trim() !== "") {
+                const dudaIndex = dudas.findIndex(duda => duda.user === user && duda.report === report);
+                if (dudaIndex !== -1) {
+                    dudas[dudaIndex].respuesta = respuesta;
+                    localStorage.setItem('dudas', JSON.stringify(dudas));
+                    displayDudas();
+                }
+            }
+        }
+
+        function eliminarDuda(user, report) {
+            const confirmacion = confirm("¿Estás seguro de que quieres eliminar esta duda?");
+            if (confirmacion) {
+                dudas = dudas.filter(duda => !(duda.user === user && duda.report === report));
+                localStorage.setItem('dudas', JSON.stringify(dudas));
+                displayDudas();
+            }
+        }
+
+        function calificar(user, timestamp) {
+            const calificacion = prompt("Califica del 1 al 10:");
+            if (calificacion !== null && calificacion.trim() !== "") {
+                const comentario = prompt("Déjanos tu comentario:");
+                const dudaIndex = dudas.findIndex(duda => duda.user === user && duda.timestamp === timestamp);
+                if (dudaIndex !== -1) {
+                    dudas[dudaIndex].calificacion = calificacion;
+                    dudas[dudaIndex].comentario = comentario;
+                    localStorage.setItem('dudas', JSON.stringify(dudas));
+                    displayDudas();
+                }
+            }
+        }
+
+        function eliminarTodasLasDudas() {
+            const confirmacion = confirm("¿Estás seguro de que quieres eliminar todas las dudas?");
+            if (confirmacion) {
+                localStorage.removeItem('dudas');
+                dudas = [];
+                displayDudas();
+            }
+        }
+
+        function silenciarUsuario() {
+            const username = prompt("Ingresa el nombre del usuario a silenciar:");
+            const tiempo = parseInt(prompt("Ingresa el tiempo de silenciamiento en minutos:"));
+            if (tiempo > 0) {
+                const tiempoEnMilisegundos = tiempo * 60 * 1000;
+                const tiempoDeSilenciamiento = Date.now() + tiempoEnMilisegundos;
+                usuariosSilenciados[username] = tiempoDeSilenciamiento;
+                localStorage.setItem('usuariosSilenciados', JSON.stringify(usuariosSilenciados));
+                alert(`Usuario ${username} silenciado por ${tiempo} minutos.`);
+            }
+        }
+
+        function isUsuarioSilenciado(username) {
+            if (usuariosSilenciados.hasOwnProperty(username)) {
+                if (usuariosSilenciados[username] > Date.now()) {
+                    return true;
+                } else {
+                    delete usuariosSilenciados[username];
+                    localStorage.setItem('usuariosSilenciados', JSON.stringify(usuariosSilenciados));
+                }
+            }
+            return false;
+        }
+
+        // Calificaciones
+        var calificaciones = JSON.parse(localStorage.getItem('calificaciones')) || {};
+
+        function displayCalificaciones() {
+            const calificacionesSection = document.getElementById("calificacionesSection");
+            calificacionesSection.innerHTML = '<h2>Calificaciones del Personal</h2>';
+            for (const staffMember in calificaciones) {
+                const totalCalificaciones = calificaciones[staffMember].length;
+                const sumaCalificaciones = calificaciones[staffMember].reduce((total, calificacion) => total + calificacion, 0);
+                const promedioCalificaciones = totalCalificaciones > 0 ? sumaCalificaciones / totalCalificaciones : 0;
+                calificacionesSection.innerHTML += `
+                    <div>
+                        <p>${staffMember} - Promedio: ${promedioCalificaciones.toFixed(1)}</p>
+                        <button class="button-small" onclick="verCalificaciones('${staffMember}')">Ver Calificaciones</button>
+                    </div>
+                `;
+            }
+        }
+
+        function verCalificaciones(staffMember) {
+            const calificacionesSection = document.getElementById("calificacionesSection");
+            const calificacionesStaff = calificaciones[staffMember];
+            if (calificacionesStaff && calificacionesStaff.length > 0) {
+                const calificacionesHTML = calificacionesStaff.map(calificacion => `<li>${calificacion}</li>`).join('');
+                calificacionesSection.innerHTML += `
+                    <div>
+                        <h3>Calificaciones de ${staffMember}</h3>
+                        <ul>${calificacionesHTML}</ul>
+                    </div>
+                `;
+            } else {
+                calificacionesSection.innerHTML += `<p>No hay calificaciones para ${staffMember}.</p>`;
+            }
+            
+        }
+    </script>
+</body>
+</html>
